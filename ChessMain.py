@@ -1,5 +1,7 @@
-import pygame as p
 import ChessEngine
+import pygame as p
+import math
+import random
 
 width = height = 512
 dim = 8  # Dimensions (8x8)
@@ -18,21 +20,22 @@ def main():
     p.init()
     screen = p.display.set_mode((width, height))
     clock = p.time.Clock()
-    screen.fill(p.Color("white"))
+    screen.fill(p.Color("White"))
 
-    gs = ChessEngine.gameState()
-    validmoves = gs.getvalidmoves()
-    movemade = False  # check when move is made
+    gs = ChessEngine.GameState()
+    validMoves = gs.getValidMoves()
+    moveMade = False
     loadImages()
+    running = True
+
     sqSelected = ()
     playerClicks = []
-    running = True
     while running:
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
-            elif e.type == p.MOUSEBUTTONDOWN:  # and gs.whiteToMove:
-                # print("hi")
+
+            elif e.type == p.MOUSEBUTTONDOWN and gs.whiteToMove:
                 location = p.mouse.get_pos()
                 col = location[0] // sqsize
                 row = location[1] // sqsize
@@ -45,25 +48,42 @@ def main():
 
                 if len(playerClicks) == 2:
                     move = ChessEngine.Move(playerClicks[0], playerClicks[1], gs.board)
-                    if move in validmoves:
-                        gs.makeMove(move)
-                        movemade = True
-                    print(move.getChessNot())
-                    sqSelected = ()
-                    playerClicks = []
+                    for i in range(len(validMoves)):
+                        if move == validMoves[i]:
+                            gs.makeMove(validMoves[i])
+                            moveMade = True
+                            sqSelected = ()
+                            playerClicks = []
+                    if not moveMade:
+                        playerClicks = [sqSelected]
+
+
             elif e.type == p.KEYDOWN:
                 if e.key == p.K_z:
                     gs.undoMove()
                     sqSelected = ()
                     playerClicks = []
                     moveMade = True
-        if movemade:
-            validmoves = gs.getvalidmoves()
-            movemade = False
-        # print(len(playerClicks))#+playerClicks)
         drawGameState(screen, gs)
         clock.tick(maxfps)
         p.display.flip()
+
+        if moveMade:
+            validMoves = gs.getValidMoves()
+            moveMade = False
+
+        if gs.checkMate:
+            print("Black wins by checkmate") if gs.whiteToMove else print("White wins by checkmate")
+            running = False
+
+        if gs.stalemate:
+            print("Draw by stalemate")
+            running = False
+
+        if not gs.whiteToMove and len(validMoves) != 0 and not moveMade:
+            move = gs.getBestMove(1)
+            gs.makeMove(move)
+            moveMade = True
 
 
 def drawGameState(screen, gs):
@@ -72,11 +92,11 @@ def drawGameState(screen, gs):
 
 
 def drawBoard(screen):
-    colors = [p.Color("white"), p.Color("gray")]
+    colours = [p.Color("white"), p.Color("gray")]
     for r in range(dim):
         for c in range(dim):
-            color = colors[((r + c) % 2)]
-            p.draw.rect(screen, color, p.Rect(c * sqsize, r * sqsize, sqsize, sqsize))
+            colour = colours[((r + c) % 2)]
+            p.draw.rect(screen, colour, p.Rect(c * sqsize, r * sqsize, sqsize, sqsize))
 
 
 def drawPieces(screen, board):
